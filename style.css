@@ -1,0 +1,252 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #2a3242;
+    color: white;
+    min-height: 100vh;
+}
+/* wraps board + buttons + rules */
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.board-wrapper {
+    position: relative;
+    width: fit-content;  /* width matches the board */
+    margin: 0 auto;      /* center horizontally */
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+.board {
+    display: inline-block;
+    border: 2px solid rgba(255, 255, 255, 0.329);
+    border-radius: 8px;     /* rounded corners */
+    overflow: hidden;       /* clip cell corners inside */
+}
+.row {
+    display: flex;
+}
+.row input {
+    width: 40px;
+    height: 40px;
+    text-align: center;
+    font-size: 24px;
+    border: 1px solid #4f4f52;
+    box-sizing: border-box;
+
+    outline: none;              /* kill default outline */
+    caret-color: transparent;   /* hide blinking text cursor */
+}
+/* Focus style that stays inside the cell, not outside */
+.row input:focus {
+    border-color: #3c68f7;                 /* optional: slight color change */
+    box-shadow: inset 0 0 0 2px #16add6;   /* inner highlight, no outer glow */
+}
+/* Thick vertical lines after col 3 and 6 (but not at the very right edge) */
+.row input:nth-child(3n):not(:last-child) {
+    border-right: 3px solid black;
+}
+
+/* Thick horizontal lines after row 3 and 6 (but not at the very bottom edge) */
+.row:nth-child(3n):not(:last-child) input {
+    border-bottom: 3px solid black;
+}
+.controls {
+    margin-top: 2px;
+    margin-bottom: 1px;
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+}
+/* Base difficulty button state: slightly faded */
+.difficulty-btn {
+    font-size: 16px;
+    cursor: pointer;
+    user-select: none;
+    opacity: 0.5;           /* faded by default */
+}
+
+/* Active difficulty: full opacity + maybe a small outline */
+.difficulty-btn.active {
+    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+/* Base hover button style (from the template, slightly tweaked) */
+.btn-hover {
+    width: 100px;              /* narrower, more like a button than a pill */
+    height: 38px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    margin: 4px;
+    text-align: center;
+    border: none;
+    background-size: 300% 100%;
+
+    border-radius: 8px;        /* softer corners, not a pill */
+    -moz-transition: all .2s ease-in-out;
+    -o-transition: all .2s ease-in-out;
+    -webkit-transition: all .2s ease-in-out;
+    transition: all .2s ease-in-out;
+}
+
+.btn-hover:hover {
+    background-position: 100% 0;
+    -moz-transition: all .4s ease-in-out;
+    -o-transition: all .4s ease-in-out;
+    -webkit-transition: all .4s ease-in-out;
+    transition: all .4s ease-in-out;
+}
+
+.btn-hover:focus {
+    outline: none;
+}
+/* Easy = green gradient */
+.btn-hover.btn-easy {
+    background-image: linear-gradient(to right,
+        #0ba360, #3cba92, #30dd8a, #2bb673);
+    box-shadow: 0 4px 15px 0 rgba(23, 168, 108, 0.75);
+}
+
+/* Medium = orange gradient */
+.btn-hover.btn-medium {
+    background-image: linear-gradient(to right,
+        #f5ce62, #ffb74d, #fb8c00, #f57c00);
+    box-shadow: 0 4px 15px 0 rgba(229, 150, 50, 0.75);
+}
+
+/* Hard = red gradient */
+.btn-hover.btn-hard {
+    background-image: linear-gradient(to right,
+        #eb3941, #f15e64, #e14e53, #e2373f);
+    box-shadow: 0 4px 15px 0 rgba(242, 97, 103, 0.6);
+}
+.difficulty-btn.active {
+    box-shadow: 0 0 0 2px #fff;
+    transform: translateY(-1px);
+}
+.rules {
+    margin-top: 24px;
+    margin-bottom: 24px;
+    max-width: 480px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.25);   /* subtle panel on dark bg */
+    color: #f5f5f5;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.rules h2 {
+    font-size: 18px;
+    margin: 0 0 8px;
+    text-align: center;
+}
+
+.rules ul {
+    padding-left: 20px;
+    margin: 0;
+}
+
+.rules li {
+    margin-bottom: 4px;
+}
+/* Highlighted cells (drag selection) */
+.row input.highlight {
+    background-color: rgb(15, 255, 123); /* light green, transparent */
+}
+
+/* Optional: avoid text selection inside cells while dragging */
+.row input {
+    user-select: none;
+}
+/* Side buttons: positioned to the LEFT of the centered board */
+.side-tools {
+    position: absolute;
+    right: 100%;          /* move them completely to the left of board */
+    margin-right: 12px;   /* gap between buttons and board */
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.side-btn {
+    padding: 6px 10px;
+    min-width: 120px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background-color: #1f2533;
+    color: #f5f5f5;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.side-btn:hover {
+    background-color: #2b3447;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+}
+
+.side-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Pencil mode "on" state */
+.side-btn.active {
+    border-color: #7fc4ff;
+    box-shadow: 0 0 6px #7fc4ff;
+}
+
+/* Given numbers (from the generator) – slightly thicker */
+.row input.given {
+    font-weight: 600;              /* semi-bold (not full bold) */
+}
+
+/* User pencil entries – different color and slightly smaller */
+.row input.pencil {
+    color: #7fc4ff;                /* light blue */
+    font-size: 20px;               /* a bit smaller than main entries */
+}
+.side-controls-box {
+    margin-top: 10px;
+    max-width: 210px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.35);  /* similar to .rules, slightly stronger */
+    color: #f5f5f5;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.side-controls-box h3 {
+    font-size: 14px;
+    margin: 0 0 6px;
+    text-align: left;
+}
+
+.side-controls-box ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.side-controls-box li {
+    margin-bottom: 3px;
+}
+.subtitle {
+    margin-top: -10px;       /* pull it a bit closer to the title */
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #c7c7c7;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
