@@ -19,102 +19,72 @@ function createBlankPuzzle() {
   return board;
 }
 
-// Check if num is allowed in given row
-function checkRow(row, num, puzzle) {
+// Check if a value is valid at (row, col) in a puzzle
+function checkValue(value, row, col, puzzle) {
+  // Row check
   for (let c = 0; c < COLS; c++) {
-    if (puzzle[row][c] === num) {
+    if (puzzle[row][c] === value) {
       return false;
     }
   }
-  return true;
-}
 
-// Check if num is allowed in given col
-function checkCol(col, num, puzzle) {
+  // Column check
   for (let r = 0; r < ROWS; r++) {
-    if (puzzle[r][col] === num) {
+    if (puzzle[r][col] === value) {
       return false;
     }
   }
-  return true;
-}
 
-// Given row, col, return which 3x3 box (1..9) it's in
-function getBox(row, col) {
-  const boxRow = Math.floor(row / 3);
-  const boxCol = Math.floor(col / 3);
-  // boxes numbered:
-  // 1 2 3
-  // 4 5 6
-  // 7 8 9
-  return boxRow * 3 + boxCol + 1;
-}
+  // 3x3 box check
+  const boxRowStart = Math.floor(row / 3) * 3;
+  const boxColStart = Math.floor(col / 3) * 3;
 
-// Check if num is allowed in given 3x3 box
-function checkBox(box, num, puzzle) {
-  // Convert box number back to top-left row/col of that box
-  const boxRowIndex = Math.floor((box - 1) / 3) * 3;
-  const boxColIndex = ((box - 1) % 3) * 3;
-
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      if (puzzle[boxRowIndex + i][boxColIndex + j] === num) {
+  for (let r = boxRowStart; r < boxRowStart + 3; r++) {
+    for (let c = boxColStart; c < boxColStart + 3; c++) {
+      if (puzzle[r][c] === value) {
         return false;
       }
     }
   }
-  return true;
-}
-
-// Combined check: row + col + box
-function checkValue(num, row, col, puzzle) {
-  if (!checkRow(row, num, puzzle)) return false;
-  if (!checkCol(col, num, puzzle)) return false;
-
-  const box = getBox(row, col);
-  if (!checkBox(box, num, puzzle)) return false;
 
   return true;
 }
 
-// Shuffle the candidate values array in-place (like your swap algorithm)
-function shuffleValues(values) {
-  for (let i = 0; i < values.length; i++) {
-    const swapSpot1 = Math.floor(Math.random() * values.length);
-    const swapSpot2 = Math.floor(Math.random() * values.length);
-
-    const hold = values[swapSpot1];
-    values[swapSpot1] = values[swapSpot2];
-    values[swapSpot2] = hold;
+// Fisher–Yates shuffle for an array
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = array[i];
+    array[i] = array[j];
+    array[j] = tmp;
   }
 }
 
-// Recursive backtracking fill, like your fillCell in Java
+// Recursive function to fill the board with a valid solution
 function fillCell(row, col, puzzle, values) {
   if (row === ROWS) {
-    // Board is full
-    return true;
+    return true; // Reached past last row → solved
   }
 
-  // Compute next row/col
   let nextRow = row;
   let nextCol = col + 1;
   if (nextCol === COLS) {
-    nextRow = row + 1;
+    nextRow++;
     nextCol = 0;
   }
 
-  // Shuffle values 1–9 before trying them
-  shuffleValues(values);
+  // If this cell is already filled, skip to next
+  if (puzzle[row][col] !== 0) {
+    return fillCell(nextRow, nextCol, puzzle, values);
+  }
 
+  // Try shuffled 1–9
+  shuffle(values);
   for (let i = 0; i < values.length; i++) {
-    const num = values[i];
+    const val = values[i];
+    if (checkValue(val, row, col, puzzle)) {
+      puzzle[row][col] = val;
 
-    if (checkValue(num, row, col, puzzle)) {
-      // Place the number
-      puzzle[row][col] = num;
-
-      // Recurse to fill next cell
       if (fillCell(nextRow, nextCol, puzzle, values)) {
         return true;
       }
@@ -137,7 +107,7 @@ function createPuzzle() {
 }
 
 /* =========================
-   Solver logic (port of Solver.java)
+   Solver logic (for checking solvability)
    ========================= */
 
 // Clone a 2D array
@@ -188,31 +158,34 @@ function solveCell(row, col, puzzle) {
     }
   }
 
-  return false;
+  return false; // no value worked
 }
 
 /* =========================
-   Remove cells with guarantee
+   Cell-removal logic
    ========================= */
 
-// Remove `blanks` cells, but only keep removals that leave puzzle solvable
-function removeCellsWithGuarantee(puzzle, blanks) {
-  let attempts = blanks;
+// Remove a value from the board at (row, col) and check uniqueness
+// We'll adapt your Java "removeCells" approach: try removing cells while
+// making sure the puzzle still has at least one solution.
+function removeCellsWithGuarantee(puzzle, blanksToRemove) {
+  let attempts = blanksToRemove;
 
   while (attempts > 0) {
-    const row = Math.floor(Math.random() * 9);
-    const col = Math.floor(Math.random() * 9);
+    const row = Math.floor(Math.random() * ROWS);
+    const col = Math.floor(Math.random() * COLS);
 
     if (puzzle[row][col] === 0) {
-      // Already empty, skip
-      continue;
+      continue; // already blank
     }
 
     const backup = puzzle[row][col];
     puzzle[row][col] = 0;
 
-    // If this removal makes it unsolvable, undo it
-    if (!isSolvable(puzzle)) {
+    // Check if puzzle is still solvable
+    const valid = isSolvable(puzzle);
+    if (!valid) {
+      // revert if unsolvable
       puzzle[row][col] = backup;
     } else {
       attempts--;
@@ -226,9 +199,12 @@ function removeCellsWithGuarantee(puzzle, blanks) {
 
 function generatePuzzle(difficulty) {
   // 1) Build a full valid solution
-  const puzzle = createPuzzle();
+  const solution = createPuzzle();
 
-  // 2) Decide how many blanks based on difficulty
+  // 2) Clone solution to make a puzzle we can punch holes in
+  const puzzle = clonePuzzle(solution);
+
+  // 3) Decide how many blanks based on difficulty
   let blanks;
   if (difficulty === "h") {
     blanks = 50;
@@ -238,9 +214,9 @@ function generatePuzzle(difficulty) {
     blanks = 30; // default easy
   }
 
-  // 3) Remove cells, but keep puzzle solvable
+  // 4) Remove cells, but keep puzzle solvable
   removeCellsWithGuarantee(puzzle, blanks);
 
-  // 4) Return the puzzle to script.js
-  return puzzle;
+  // 5) Return both puzzle and full solution to script.js
+  return { puzzle, solution };
 }

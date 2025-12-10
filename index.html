@@ -18,18 +18,10 @@
             <div class="side-tools">
                 <button id="clear-highlights-btn" class="side-btn">Clear Highlights</button>
                 <button id="pencil-mode-btn" class="side-btn">Pencil Mode</button>
-
-        <!-- NEW: Controls box under the side buttons -->
-                <div class="side-controls-box">
-                    <h3>Controls</h3>
-                    <ul>
-                        <li><strong>Click</strong> a cell or use <strong>WASD</strong> to move.</li>
-                        <li><strong>Delete:</strong> delete / backspace / 0 to clear.</li>
-                        <li>Hold <strong>Shift</strong> and drag / move to highlight cells.</li>
-                        <li>Press <strong>E</strong> or use <strong>Pencil Mode</strong></li>
-                    </ul>
-                </div>
+                <button id="hint-btn" class="side-btn">Hint</button>
+                <button id="help-mode-btn" class="side-btn">Help Mode</button>
             </div>
+
             <div class="board">
                 <div class="row">
                     <input type="text" maxlength="1">
@@ -131,6 +123,16 @@
                     <input type="text" maxlength="1">
                 </div>
             </div>
+            <div class="side-controls-box">
+                <h3>Controls</h3>
+                <ul>
+                    <li><strong>Click</strong> a cell or use <strong>WASD</strong> to move.</li>
+                    <li><strong>Delete:</strong> delete / backspace / 0 to clear.</li>
+                    <li>Hold <strong>Shift</strong> and drag / move to highlight cells.</li>
+                    <li>Press <strong>E</strong> or use <strong>Pencil Mode</strong></li>
+                    <li><strong>Help Mode</strong> will validate inputs</li>
+                </ul>
+            </div>
         </div>
 
         <div class="controls">
@@ -154,4 +156,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
