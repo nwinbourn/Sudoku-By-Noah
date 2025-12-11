@@ -1,16 +1,24 @@
 // engine.js
-// Port of your Java Generator + Solver logic into JavaScript.
+// Sudoku generator + solver with UNIQUE-solution puzzles.
 
-// Constants for board size
+/* =========================
+   Basic helpers
+   ========================= */
+
 const ROWS = 9;
 const COLS = 9;
 
-/* =========================
-   Core puzzle generation
-   ========================= */
+// Deep copy a 9x9 board
+function cloneBoard(board) {
+  const copy = [];
+  for (let r = 0; r < ROWS; r++) {
+    copy[r] = board[r].slice();
+  }
+  return copy;
+}
 
 // Create a blank 9x9 puzzle filled with 0s
-function createBlankPuzzle() {
+function createBlankBoard() {
   const board = [];
   for (let r = 0; r < ROWS; r++) {
     const row = new Array(COLS).fill(0);
@@ -19,204 +27,201 @@ function createBlankPuzzle() {
   return board;
 }
 
-// Check if a value is valid at (row, col) in a puzzle
-function checkValue(value, row, col, puzzle) {
-  // Row check
+/* =========================
+   Validity checks
+   ========================= */
+
+// Check if placing num at (row, col) is valid
+function isSafe(board, row, col, num) {
+  // Row
   for (let c = 0; c < COLS; c++) {
-    if (puzzle[row][c] === value) {
-      return false;
-    }
+    if (board[row][c] === num) return false;
   }
 
-  // Column check
+  // Column
   for (let r = 0; r < ROWS; r++) {
-    if (puzzle[r][col] === value) {
-      return false;
-    }
+    if (board[r][col] === num) return false;
   }
 
-  // 3x3 box check
+  // 3x3 box
   const boxRowStart = Math.floor(row / 3) * 3;
   const boxColStart = Math.floor(col / 3) * 3;
-
-  for (let r = boxRowStart; r < boxRowStart + 3; r++) {
-    for (let c = boxColStart; c < boxColStart + 3; c++) {
-      if (puzzle[r][c] === value) {
-        return false;
-      }
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (board[boxRowStart + r][boxColStart + c] === num) return false;
     }
   }
 
   return true;
 }
 
-// Fisher–Yates shuffle for an array
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = array[i];
-    array[i] = array[j];
-    array[j] = tmp;
-  }
-}
-
-// Recursive function to fill the board with a valid solution
-function fillCell(row, col, puzzle, values) {
-  if (row === ROWS) {
-    return true; // Reached past last row → solved
-  }
-
-  let nextRow = row;
-  let nextCol = col + 1;
-  if (nextCol === COLS) {
-    nextRow++;
-    nextCol = 0;
-  }
-
-  // If this cell is already filled, skip to next
-  if (puzzle[row][col] !== 0) {
-    return fillCell(nextRow, nextCol, puzzle, values);
-  }
-
-  // Try shuffled 1–9
-  shuffle(values);
-  for (let i = 0; i < values.length; i++) {
-    const val = values[i];
-    if (checkValue(val, row, col, puzzle)) {
-      puzzle[row][col] = val;
-
-      if (fillCell(nextRow, nextCol, puzzle, values)) {
-        return true;
-      }
-
-      // Backtrack (0 = blank)
-      puzzle[row][col] = 0;
-    }
-  }
-
-  // No number worked here; signal failure to caller
-  return false;
-}
-
-// Create a fully solved Sudoku puzzle (like createPuzzle in Java)
-function createPuzzle() {
-  const values = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-  const puzzle = createBlankPuzzle();
-  fillCell(0, 0, puzzle, values);
-  return puzzle;
-}
-
 /* =========================
-   Solver logic (for checking solvability)
+   Backtracking solver
    ========================= */
 
-// Clone a 2D array
-function clonePuzzle(puzzle) {
-  return puzzle.map(row => row.slice());
-}
-
-// Public entry: check if puzzle is solvable
-function isSolvable(puzzle) {
-  const copy = clonePuzzle(puzzle);
-  return solve(copy);
-}
-
-// Start solving at (0,0)
-function solve(puzzle) {
-  return solveCell(0, 0, puzzle);
-}
-
-// Recursive backtracking solver, like solveCell in Java
-function solveCell(row, col, puzzle) {
-  if (row === 9) {
-    // Reached past last row → solved
-    return true;
+// Solve a board in place, stop at the first solution
+function solveBoard(board) {
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (board[row][col] === 0) {
+        // Try digits 1-9
+        const nums = shuffleArray([1,2,3,4,5,6,7,8,9]);
+        for (let i = 0; i < nums.length; i++) {
+          const num = nums[i];
+          if (isSafe(board, row, col, num)) {
+            board[row][col] = num;
+            if (solveBoard(board)) {
+              return true;
+            }
+            board[row][col] = 0;
+          }
+        }
+        return false; // no number works here
+      }
+    }
   }
+  // No empty cells, solved
+  return true;
+}
 
-  let nextRow = row;
-  let nextCol = col + 1;
-  if (nextCol === 9) {
-    nextRow++;
-    nextCol = 0;
-  }
+// Count how many solutions the board has, up to a limit.
+// If solutions reach `limit`, we stop and return at least that many.
+function countSolutions(board, limit) {
+  let solutions = 0;
 
-  // If cell is already filled, skip to next
-  if (puzzle[row][col] !== 0) {
-    return solveCell(nextRow, nextCol, puzzle);
-  } else {
-    // Try numbers 1–9 in this empty cell
-    for (let num = 1; num <= 9; num++) {
-      if (checkValue(num, row, col, puzzle)) {
-        puzzle[row][col] = num;
+  function backtrack() {
+    if (solutions >= limit) return; // already enough
 
-        if (solveCell(nextRow, nextCol, puzzle)) {
-          return true;
-        } else {
-          puzzle[row][col] = 0; // backtrack
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        if (board[row][col] === 0) {
+          for (let num = 1; num <= 9; num++) {
+            if (isSafe(board, row, col, num)) {
+              board[row][col] = num;
+              backtrack();
+              board[row][col] = 0;
+
+              if (solutions >= limit) return;
+            }
+          }
+          return; // no number works here, backtrack
         }
       }
     }
+    // No empty cells, found a complete solution
+    solutions += 1;
   }
 
-  return false; // no value worked
+  backtrack();
+  return solutions;
 }
 
 /* =========================
-   Cell-removal logic
+   Generation helpers
    ========================= */
 
-// Remove a value from the board at (row, col) and check uniqueness
-// We'll adapt your Java "removeCells" approach: try removing cells while
-// making sure the puzzle still has at least one solution.
-function removeCellsWithGuarantee(puzzle, blanksToRemove) {
-  let attempts = blanksToRemove;
+// Fisher Yates shuffle for small arrays
+function shuffleArray(arr) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = tmp;
+  }
+  return copy;
+}
 
-  while (attempts > 0) {
-    const row = Math.floor(Math.random() * ROWS);
-    const col = Math.floor(Math.random() * COLS);
+// Generate a fully solved valid Sudoku board
+function generateFullSolution() {
+  const board = createBlankBoard();
 
-    if (puzzle[row][col] === 0) {
-      continue; // already blank
+  // Fill diagonal 3x3 boxes first
+  for (let box = 0; box < 3; box++) {
+    fillBox(board, box * 3, box * 3);
+  }
+
+  // Then solve the rest
+  solveBoard(board);
+  return board;
+}
+
+// Fill a 3x3 box starting at (rowStart, colStart) with random 1-9
+function fillBox(board, rowStart, colStart) {
+  const nums = shuffleArray([1,2,3,4,5,6,7,8,9]);
+  let idx = 0;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      board[rowStart + r][colStart + c] = nums[idx++];
     }
+  }
+}
 
-    const backup = puzzle[row][col];
-    puzzle[row][col] = 0;
+/* =========================
+   Remove cells while keeping uniqueness
+   ========================= */
 
-    // Check if puzzle is still solvable
-    const valid = isSolvable(puzzle);
-    if (!valid) {
-      // revert if unsolvable
-      puzzle[row][col] = backup;
+// Remove up to `blanksTarget` cells, ensuring the puzzle has a unique solution.
+// If uniqueness would be broken, we undo that removal.
+function removeCellsWithUniqueness(puzzle, blanksTarget) {
+  const coords = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      coords.push({ r, c });
+    }
+  }
+
+  // Randomize order in which we try removing
+  const shuffled = shuffleArray(coords);
+  let blanks = 0;
+
+  for (let i = 0; i < shuffled.length && blanks < blanksTarget; i++) {
+    const { r, c } = shuffled[i];
+    if (puzzle[r][c] === 0) continue;
+
+    const backup = puzzle[r][c];
+    puzzle[r][c] = 0;
+
+    const testBoard = cloneBoard(puzzle);
+    const numSolutions = countSolutions(testBoard, 2);
+
+    // If not exactly one solution, revert
+    if (numSolutions !== 1) {
+      puzzle[r][c] = backup;
     } else {
-      attempts--;
+      blanks += 1;
     }
   }
 }
 
 /* =========================
-   Public API for the UI: generatePuzzle(difficulty)
+   Main API
    ========================= */
 
+// difficulty: "e", "m", or "h"
 function generatePuzzle(difficulty) {
-  // 1) Build a full valid solution
-  const solution = createPuzzle();
+  // 1) Generate a fully solved board
+  const solution = generateFullSolution();
 
-  // 2) Clone solution to make a puzzle we can punch holes in
-  const puzzle = clonePuzzle(solution);
+  // 2) Clone it for the puzzle
+  const puzzle = cloneBoard(solution);
 
-  // 3) Decide how many blanks based on difficulty
+  // 3) Decide how many blanks to aim for
   let blanks;
   if (difficulty === "h") {
     blanks = 50;
   } else if (difficulty === "m") {
     blanks = 40;
   } else {
-    blanks = 30; // default easy
+    blanks = 30; // easy by default
   }
 
-  // 4) Remove cells, but keep puzzle solvable
-  removeCellsWithGuarantee(puzzle, blanks);
+  // 4) Remove cells but keep a unique solution
+  removeCellsWithUniqueness(puzzle, blanks);
 
   // 5) Return both puzzle and full solution to script.js
-  return { puzzle, solution };
+  return {
+    puzzle,
+    solution
+  };
 }
